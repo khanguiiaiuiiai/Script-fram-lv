@@ -1,0 +1,131 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- ========================================
+-- AUTO NHẬP TẤT CẢ CODE GAME
+-- ========================================
+local function autoRedeemCodes()
+    local HttpService = game:GetService("HttpService")
+    local codes = {}
+
+    -- 1. Thử lấy danh sách code từ pastebin (cập nhật thường xuyên)
+    --    Bạn có thể thay link raw bằng link code mới nhất từ cộng đồng
+    local success, result = pcall(function()
+        return HttpService:GetAsync("https://pastebin.com/raw/your_raw_link_here")  -- Đổi link này
+    end)
+    if success then
+        -- Giả sử pastebin trả về JSON array ["code1","code2",...]
+        codes = HttpService:JSONDecode(result)
+    else
+        -- Nếu không lấy được, dùng danh sách code cũ (vẫn hoạt động được vài code)
+        codes = {
+            "Sub2CaptainMaui", "Sub2NoobMaster123", "Sub2Daigrock",
+            "Axiore", "TantaiGaming", "MagicBus", "JCWK", "Starcodeheo",
+            "KittGaming", "Fudd10", "Fudd10_V2", "Bluxxy", "THEGREATACE",
+            "UPD15", "KITT_RESET", "Sub2UncleKizaru", "Axiore", "TantaiGaming"
+        }
+    end
+
+    -- 2. Tìm remote để gửi lệnh nhập code
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    local commF = remotes and remotes:FindFirstChild("CommF_")
+    if not commF then
+        warn("Không tìm thấy remote CommF_! Code sẽ không được nhập.")
+        return
+    end
+
+    -- 3. Duyệt từng code và gửi lệnh
+    for _, code in ipairs(codes) do
+        local args = { [1] = "RedeemCode", [2] = code }
+        local success, msg = pcall(function()
+            commF:InvokeServer(unpack(args))
+        end)
+        if success then
+            print("✅ Đã nhập code: " .. code)
+        else
+            print("❌ Code không hợp lệ hoặc đã hết hạn: " .. code)
+        end
+        task.wait(1)  -- Nghỉ 1s giữa các lần nhập để tránh spam
+    end
+end
+
+-- ========================================
+-- AUTO FARM LEVEL (CHỈ FARM LV)
+-- ========================================
+local function autoFarm()
+    while true do
+        task.wait(0.5)
+
+        -- Đảm bảo nhân vật tồn tại
+        character = player.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            character = player.CharacterAdded:Wait()
+        end
+
+        -- Tìm quái gần nhất trong folder Enemies
+        local nearestEnemy = nil
+        local shortestDistance = math.huge
+        local enemiesFolder = workspace:FindFirstChild("Enemies")
+        if not enemiesFolder then
+            -- Nếu không có folder Enemies (có thể đang ở đảo khác), tìm tất cả enemy trong workspace
+            -- (đơn giản hoá, nhưng tốt nhất nên dùng folder Enemies)
+            goto continue
+        end
+
+        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+            local humanoid = enemy:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local root = enemy:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local distance = (root.Position - character.HumanoidRootPart.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        nearestEnemy = enemy
+                    end
+                end
+            end
+        end
+
+        if nearestEnemy then
+            -- Trang bị vũ khí nếu chưa có
+            local tool = character:FindFirstChildOfClass("Tool")
+            if not tool then
+                tool = player.Backpack:FindFirstChildWhichIsA("Tool")
+                if tool then
+                    tool.Parent = character
+                end
+            end
+
+            -- Di chuyển đến quái nếu xa
+            if shortestDistance > 5 then
+                character.Humanoid:MoveTo(nearestEnemy.HumanoidRootPart.Position)
+            else
+                -- Tấn công bằng tool hiện tại
+                tool = character:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                else
+                    -- Nếu không có tool, thử dùng remote combat (cơ bản)
+                    local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+                    if remotes then
+                        local combat = remotes:FindFirstChild("Combat")
+                        if combat then
+                            combat:FireServer(nearestEnemy.HumanoidRootPart.CFrame)
+                        end
+                    end
+                end
+            end
+        end
+        ::continue::
+    end
+end
+
+-- ========================================
+-- KÍCH HOẠT CẢ HAI TÁC VỤ
+-- ========================================
+task.spawn(autoRedeemCodes)
+task.spawn(autoFarm)
+
+print("🚀 Script đã chạy! Auto farm level và auto nhập code đang hoạt động.")
+```
